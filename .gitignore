@@ -1,0 +1,48 @@
+# Backend
+backend/target/
+backend/*.jar
+backend/*.war
+backend/*.log
+backend/.mvn/
+
+# Frontend
+admin_panel/node_modules/
+admin_panel/.next/
+admin_panel/out/
+customer_portal/node_modules/
+customer_portal/.next/
+customer_portal/out/
+
+# TypeScript build artifacts
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+.env.production
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build
+build/
+dist/
+
+# Database
+*.db
+*.sqlite
