@@ -39,28 +39,28 @@ deploy-production:
     - git fetch origin $DEPLOY_BRANCH
     - git reset --hard origin/$DEPLOY_BRANCH
 
-    # Generate .env file from CI/CD variables
-    - echo "DB_NAME=${DB_NAME}" > .env
-    - echo "DB_USERNAME=${DB_USERNAME}" >> .env
-    - echo "DB_PASSWORD=${DB_PASSWORD}" >> .env
-    - echo "SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}" >> .env
-    - echo "MOSQUITTO_HOST=${MOSQUITTO_HOST}" >> .env
-    - echo "MOSQUITTO_PORT=${MOSQUITTO_PORT}" >> .env
-    - echo "MOSQUITTO_USERNAME=${MOSQUITTO_USERNAME}" >> .env
-    - echo "MOSQUITTO_PASSWORD=${MOSQUITTO_PASSWORD}" >> .env
-    - echo "JWT_SECRET=${JWT_SECRET}" >> .env
-    - echo "JWT_EXPIRATION=${JWT_EXPIRATION}" >> .env
-    - echo "MAIL_HOST=${MAIL_HOST}" >> .env
-    - echo "MAIL_PORT=${MAIL_PORT}" >> .env
-    - echo "MAIL_USERNAME=${MAIL_USERNAME}" >> .env
-    - echo "MAIL_PASSWORD=${MAIL_PASSWORD}" >> .env
-    - echo "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" >> .env
-    - echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" >> .env
-    - echo "CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}" >> .env
-    - echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" >> .env
-    - echo "NEXT_PUBLIC_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" >> .env
-    - echo "DOMAIN=${DOMAIN}" >> .env
-    - echo "API_DOMAIN=${API_DOMAIN}" >> .env
+    # Generate .env file from CI/CD variables (values quoted to handle spaces)
+    - echo "DB_NAME=\"${DB_NAME}\"" > .env
+    - echo "DB_USERNAME=\"${DB_USERNAME}\"" >> .env
+    - echo "DB_PASSWORD=\"${DB_PASSWORD}\"" >> .env
+    - echo "SPRING_DATASOURCE_URL=\"jdbc:postgresql://postgres:5432/${DB_NAME}\"" >> .env
+    - echo "MOSQUITTO_HOST=\"${MOSQUITTO_HOST}\"" >> .env
+    - echo "MOSQUITTO_PORT=\"${MOSQUITTO_PORT}\"" >> .env
+    - echo "MOSQUITTO_USERNAME=\"${MOSQUITTO_USERNAME}\"" >> .env
+    - echo "MOSQUITTO_PASSWORD=\"${MOSQUITTO_PASSWORD}\"" >> .env
+    - echo "JWT_SECRET=\"${JWT_SECRET}\"" >> .env
+    - echo "JWT_EXPIRATION=\"${JWT_EXPIRATION}\"" >> .env
+    - echo "MAIL_HOST=\"${MAIL_HOST}\"" >> .env
+    - echo "MAIL_PORT=\"${MAIL_PORT}\"" >> .env
+    - echo "MAIL_USERNAME=\"${MAIL_USERNAME}\"" >> .env
+    - echo "MAIL_PASSWORD=\"${MAIL_PASSWORD}\"" >> .env
+    - echo "GOOGLE_CLIENT_ID=\"${GOOGLE_CLIENT_ID}\"" >> .env
+    - echo "GOOGLE_CLIENT_SECRET=\"${GOOGLE_CLIENT_SECRET}\"" >> .env
+    - echo "CORS_ALLOWED_ORIGINS=\"${CORS_ALLOWED_ORIGINS}\"" >> .env
+    - echo "NEXT_PUBLIC_API_URL=\"${NEXT_PUBLIC_API_URL}\"" >> .env
+    - echo "NEXT_PUBLIC_GOOGLE_CLIENT_ID=\"${GOOGLE_CLIENT_ID}\"" >> .env
+    - echo "DOMAIN=\"${DOMAIN}\"" >> .env
+    - echo "API_DOMAIN=\"${API_DOMAIN}\"" >> .env
 
     # Run deployment (builds Docker images, restarts containers)
     - chmod +x deploy.sh
