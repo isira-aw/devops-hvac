@@ -26,10 +26,16 @@ deploy-production:
   script:
     - echo "Starting deployment..."
 
-    # Navigate to project directory
-    - cd $WORK_DIRECTORY
+    # Clone repo if not yet cloned, then pull latest code
+    - |
+      if [ ! -d "$WORK_DIRECTORY/.git" ]; then
+        echo "First run: cloning repository..."
+        git clone --branch $DEPLOY_BRANCH $CI_REPOSITORY_URL $WORK_DIRECTORY
+      fi
 
-    # Pull latest code
+    # Navigate to project directory and pull latest
+    - cd $WORK_DIRECTORY
+    - git remote set-url origin $CI_REPOSITORY_URL
     - git fetch origin $DEPLOY_BRANCH
     - git reset --hard origin/$DEPLOY_BRANCH
 
