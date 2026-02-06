@@ -151,31 +151,48 @@ Add each variable below. Mark sensitive ones as **Protected** and **Masked**.
 
 ---
 
-## 3. GitLab Runner Setup
+## 3. GitLab Runner Setup (REQUIRED)
 
-You need a **self-hosted GitLab Runner** on your server (or use GitLab shared runners).
+The free GitLab.com shared runners have a **400 min/month limit**. You must install a
+**self-hosted runner** on your server. This is free, unlimited, and faster.
 
-### Option A: Self-hosted runner on the same server (recommended for your setup)
+SSH into your server and run:
 
 ```bash
-# Install GitLab Runner
+# 1. Install GitLab Runner
 curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | bash
 apt install -y gitlab-runner
+```
 
-# Register the runner
+```bash
+# 2. Register the runner
+#    Get your registration token from:
+#    GitLab > Your Project > Settings > CI/CD > Runners > "New project runner"
+#
+#    When prompted, enter:
+#      - GitLab URL:    https://gitlab.com/
+#      - Token:         (paste the token from GitLab)
+#      - Description:   production-server
+#      - Tags:          production
+#      - Executor:      shell
+
 gitlab-runner register
 ```
 
-When prompted:
-- **GitLab URL:** `https://gitlab.com/`
-- **Registration token:** Found in GitLab > Settings > CI/CD > Runners > Specific runners
-- **Description:** `production-server`
-- **Tags:** `production`
-- **Executor:** `shell`
+```bash
+# 3. Add gitlab-runner user to docker group (so it can run docker commands)
+usermod -aG docker gitlab-runner
 
-### Option B: Use GitLab shared runners
+# 4. Start the runner
+gitlab-runner start
 
-Remove the `tags: - production` lines from `.gitlab-ci.yml`. Shared runners are available by default on gitlab.com.
+# 5. Verify it's running
+gitlab-runner status
+```
+
+After this, go to **GitLab > Settings > CI/CD > Runners** and you should see your
+runner listed with a green circle. The pipeline will now use your server directly
+instead of shared runners -- no minute limits, no extra cost.
 
 ---
 
