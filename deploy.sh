@@ -58,7 +58,7 @@ setup_ssl() {
         # Stop nginx if running to free port 80
         docker compose stop nginx 2>/dev/null || true
 
-        certbot certonly --standalone \
+        sudo certbot certonly --standalone \
             -d "${DOMAIN:-live-ac.tech}" \
             -d "www.${DOMAIN:-live-ac.tech}" \
             -d "${API_DOMAIN:-api.live-ac.tech}" \
