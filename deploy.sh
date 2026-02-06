@@ -78,8 +78,11 @@ deploy() {
     log "Pulling latest base images..."
     docker compose pull postgres nginx certbot 2>/dev/null || true
 
-    log "Building application containers..."
-    docker compose build --no-cache backend customer-portal
+    log "Building backend container..."
+    docker compose build --no-cache backend
+
+    log "Building customer-portal container..."
+    docker compose build --no-cache customer-portal
 
     log "Stopping existing containers..."
     docker compose down --remove-orphans
