@@ -45,7 +45,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+    CMD node -e "const http = require('http'); const req = http.request({hostname:'localhost',port:3000,path:'/',method:'GET',timeout:5000}, res => { process.exit(res.statusCode === 200 ? 0 : 1) }); req.on('error', () => process.exit(1)); req.end();"
 
 CMD ["node", "server.js"]
