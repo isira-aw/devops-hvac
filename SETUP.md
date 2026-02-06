@@ -38,14 +38,28 @@ apt install -y git
 mkdir -p /opt/hvac
 ```
 
-### Generate SSH Key Pair (for CI/CD)
+### Add Swap Space (REQUIRED for 2GB RAM servers)
 
-On the server, generate a deploy key:
+On low-memory servers, Docker builds will fail without swap:
 
 ```bash
-ssh-keygen -t ed25519 -C "gitlab-deploy" -f /root/.ssh/gitlab_deploy -N ""
-cat /root/.ssh/gitlab_deploy.pub >> /root/.ssh/authorized_keys
-cat /root/.ssh/gitlab_deploy   # Copy this private key for GitLab
+fallocate -l 4G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+# Verify
+swapon --show
+```
+
+### Disable System PostgreSQL (if installed)
+
+Docker runs its own PostgreSQL container on port 5432. If the system has PostgreSQL installed, it will conflict:
+
+```bash
+systemctl stop postgresql
+systemctl disable postgresql
 ```
 
 ### Initial SSL Certificates
@@ -63,8 +77,14 @@ certbot certonly --standalone \
 
 ```bash
 cd /opt/hvac
-git clone https://gitlab.com/YOUR_USERNAME/YOUR_REPO.git .
+git init
+git remote add origin https://gitlab.com/isira.aw/hvac-production.git
+git fetch origin main
+git reset --hard origin/main
 ```
+
+> **Note:** If `/opt/hvac` already has files, use `git init` + `git fetch` instead of `git clone`
+> (clone fails if the directory is not empty).
 
 ---
 
@@ -73,12 +93,6 @@ git clone https://gitlab.com/YOUR_USERNAME/YOUR_REPO.git .
 Go to your GitLab project: **Settings > CI/CD > Variables**
 
 Add each variable below. Mark sensitive ones as **Protected** and **Masked**.
-
-### SSH & Server
-
-| Variable         | Value                  | Protected | Masked |
-|------------------|------------------------|-----------|--------|
-| `SSH_PRIVATE_KEY`| *(contents of /root/.ssh/gitlab_deploy)* | Yes | Yes |
 
 ### Database
 
@@ -142,12 +156,12 @@ Add each variable below. Mark sensitive ones as **Protected** and **Masked**.
 
 ### Application URLs
 
-| Variable                | Value                                                                          | Protected | Masked |
-|-------------------------|--------------------------------------------------------------------------------|-----------|--------|
-| `CORS_ALLOWED_ORIGINS`  | `https://live-ac.tech,https://www.live-ac.tech`                                | Yes       | No     |
-| `NEXT_PUBLIC_API_URL`   | `https://api.live-ac.tech`                                                     | Yes       | No     |
-| `DOMAIN`                | `live-ac.tech`                                                                 | Yes       | No     |
-| `API_DOMAIN`            | `api.live-ac.tech`                                                             | Yes       | No     |
+| Variable                | Value                                                    | Protected | Masked |
+|-------------------------|----------------------------------------------------------|-----------|--------|
+| `CORS_ALLOWED_ORIGINS`  | `https://live-ac.tech,https://www.live-ac.tech`          | Yes       | No     |
+| `NEXT_PUBLIC_API_URL`   | `https://api.live-ac.tech`                               | Yes       | No     |
+| `DOMAIN`                | `live-ac.tech`                                           | Yes       | No     |
+| `API_DOMAIN`            | `api.live-ac.tech`                                       | Yes       | No     |
 
 ---
 
@@ -183,16 +197,28 @@ gitlab-runner register
 # 3. Add gitlab-runner user to docker group (so it can run docker commands)
 usermod -aG docker gitlab-runner
 
-# 4. Start the runner
-gitlab-runner start
+# 4. Give gitlab-runner passwordless sudo (needed for certbot)
+echo "gitlab-runner ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/gitlab-runner
+chmod 440 /etc/sudoers.d/gitlab-runner
 
-# 5. Verify it's running
+# 5. Set /opt/hvac ownership so gitlab-runner can manage it
+chown -R gitlab-runner:gitlab-runner /opt/hvac
+
+# 6. Add /opt/hvac as a safe git directory for both users
+git config --global --add safe.directory /opt/hvac
+su - gitlab-runner -c "git config --global --add safe.directory /opt/hvac"
+
+# 7. Start the runner and restart to pick up group changes
+gitlab-runner restart
+
+# 8. Verify it's running
 gitlab-runner status
 ```
 
-After this, go to **GitLab > Settings > CI/CD > Runners** and you should see your
-runner listed with a green circle. The pipeline will now use your server directly
-instead of shared runners -- no minute limits, no extra cost.
+After this, go to **GitLab > Settings > CI/CD > Runners** and:
+1. You should see your runner listed with a **green circle**
+2. **Disable shared runners** for the project (toggle them off) to avoid hitting the free tier limit
+3. The pipeline will now use your server directly -- no minute limits, no extra cost
 
 ---
 
@@ -217,26 +243,24 @@ Push to main branch
         │
         ▼
 ┌─────────────────┐
-│  validate-backend│  Compiles Java code (mvn compile)
-│  validate-frontend│  Builds Next.js (npm run build)
-└────────┬────────┘
-         │ Both pass
-         ▼
-┌─────────────────┐
-│ deploy-production│
+│ deploy-production│  (runs on self-hosted runner via shell executor)
 │                 │
-│  1. Generate .env from GitLab CI/CD Variables
-│  2. SCP .env to server
-│  3. SSH: git pull latest code
-│  4. SSH: run deploy.sh
-│     ├─ Build Docker images
+│  1. Clone/pull latest code to /opt/hvac
+│  2. Generate .env from GitLab CI/CD Variables
+│  3. Run deploy.sh:
+│     ├─ Obtain SSL certs if needed (certbot)
+│     ├─ Build backend Docker image (Maven/Java)
+│     ├─ Build customer-portal Docker image (Next.js)
 │     ├─ Stop old containers
 │     ├─ Start new containers
 │     └─ Health check verification
 └─────────────────┘
 ```
 
-**Auto-deploy:** Every push to `main` triggers the full pipeline automatically.
+**Auto-deploy:** Every push to `main` triggers the pipeline automatically.
+
+**Note:** Docker images are built **sequentially** (not in parallel) to avoid running out of
+memory on 2GB RAM servers.
 
 ---
 
@@ -281,6 +305,10 @@ docker compose exec postgres psql -U postgres -d hvac_db
 
 # Check disk usage
 docker system df
+
+# Check swap usage
+swapon --show
+free -h
 ```
 
 ---
@@ -290,9 +318,15 @@ docker system df
 | Issue | Solution |
 |-------|----------|
 | Backend won't start | Check logs: `docker compose logs backend`. Verify DB_PASSWORD and SPRING_DATASOURCE_URL. |
+| Backend unhealthy (slow start) | On 2GB servers, Spring Boot can take 2+ minutes to start. Check `docker compose logs -f backend` and wait. Java memory is capped at 384MB via `JAVA_OPTS`. |
+| Customer portal unhealthy | Check `docker compose logs customer-portal`. The healthcheck uses Node.js HTTP (not wget). |
 | Email not sending | Verify MAIL_PASSWORD is a Gmail App Password (not your account password). |
 | Google OAuth not working | Check GOOGLE_CLIENT_ID, ensure authorized origins include `https://live-ac.tech`. |
 | SSL certificate expired | Run `certbot renew` or check the certbot container: `docker compose logs certbot`. |
 | MQTT not connecting | Verify MOSQUITTO_HOST, PORT, USERNAME, PASSWORD. Test with: `apt install mosquitto-clients && mosquitto_sub -h HOST -p PORT -u USER -P PASS -t '#'` |
 | 502 Bad Gateway | Backend or frontend container may have crashed. Check: `docker compose ps` and restart. |
-| Pipeline fails at SSH | Verify SSH_PRIVATE_KEY variable in GitLab. Ensure the public key is in server's `authorized_keys`. |
+| Port 5432 in use | Stop system PostgreSQL: `systemctl stop postgresql && systemctl disable postgresql` |
+| Permission denied (git/docker) | Ensure `/opt/hvac` is owned by `gitlab-runner`: `chown -R gitlab-runner:gitlab-runner /opt/hvac` |
+| Pipeline stuck in "Pending" | Runner may be offline. Run `gitlab-runner restart` on the server. Also disable shared runners in GitLab settings. |
+| Docker build OOM / SSL errors | Add swap: `fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile` |
+| "dubious ownership" git error | Run: `su - gitlab-runner -c "git config --global --add safe.directory /opt/hvac"` |
