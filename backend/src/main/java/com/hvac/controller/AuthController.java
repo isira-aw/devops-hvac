@@ -51,6 +51,39 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
+        try {
+            String email = payload.get("email");
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+            }
+            authService.forgotPassword(email);
+            return ResponseEntity.ok(Map.of("message", "If an account exists with that email, a reset link has been sent"));
+        } catch (Exception e) {
+            // Return generic message to prevent email enumeration
+            return ResponseEntity.ok(Map.of("message", "If an account exists with that email, a reset link has been sent"));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
+        try {
+            String token = payload.get("token");
+            String username = payload.get("username");
+            String password = payload.get("password");
+
+            if (token == null || token.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Reset token is required"));
+            }
+
+            authService.resetCredentials(token, username, password);
+            return ResponseEntity.ok(Map.of("message", "Credentials updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/google")
     public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> payload) {
         try {

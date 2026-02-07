@@ -28,6 +28,13 @@ export default function DashboardPage() {
   const [assignPassword, setAssignPassword] = useState('');
   const [error, setError] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [credentialsError, setCredentialsError] = useState('');
+  const [credentialsSuccess, setCredentialsSuccess] = useState('');
+  const [credentialsLoading, setCredentialsLoading] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -95,6 +102,45 @@ export default function DashboardPage() {
     }
   };
 
+  const handleChangeCredentials = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCredentialsError('');
+    setCredentialsSuccess('');
+
+    if (newPassword && newPassword !== confirmNewPassword) {
+      setCredentialsError('Passwords do not match');
+      return;
+    }
+
+    if (!newUsername && !newPassword) {
+      setCredentialsError('Please provide a new username or password');
+      return;
+    }
+
+    setCredentialsLoading(true);
+
+    try {
+      await customerApi.changeCredentials({
+        username: newUsername || undefined,
+        password: newPassword || undefined,
+      });
+      setCredentialsSuccess('Credentials updated successfully');
+      setNewUsername('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+
+      // Update local user info if username changed
+      if (newUsername && user) {
+        const updatedUser = { ...user, username: newUsername };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    } catch (err: any) {
+      setCredentialsError(err.response?.data?.error || 'Failed to update credentials');
+    } finally {
+      setCredentialsLoading(false);
+    }
+  };
+
   if (isLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -122,6 +168,17 @@ export default function DashboardPage() {
               Dashboard
             </Link>
             <span>{user?.username}</span>
+            <button
+              onClick={() => {
+                setShowCredentialsModal(true);
+                setCredentialsError('');
+                setCredentialsSuccess('');
+              }}
+              className="bg-white/10 px-2 py-2 rounded hover:bg-white/20 text-center"
+              title="Change Password or Username"
+            >
+              <i className="lni lni-key"></i>
+            </button>
             <button
               onClick={() => {
                 logout();
@@ -156,6 +213,17 @@ export default function DashboardPage() {
                   <i className="lni lni-user mr-2 text-sm"></i>
                   <span>{user?.username}</span>
                 </span>
+              <button
+                onClick={() => {
+                  setShowCredentialsModal(true);
+                  setCredentialsError('');
+                  setCredentialsSuccess('');
+                  setMobileMenuOpen(false);
+                }}
+                className="px-2 py-2 hover:bg-white/10 rounded text-center"
+              >
+                <i className="lni lni-key mr-2"></i>Change Password/Username
+              </button>
               <button
                 onClick={() => {
                   logout();
@@ -309,6 +377,91 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setShowAssignModal(false)}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Change Credentials Modal */}
+      {showCredentialsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="card max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Change Password or Username</h2>
+              <button onClick={() => setShowCredentialsModal(false)}>
+                <i className="lni lni-close text-xl"></i>
+              </button>
+            </div>
+
+            {credentialsError && (
+              <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
+                {credentialsError}
+              </div>
+            )}
+
+            {credentialsSuccess && (
+              <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-4">
+                {credentialsSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleChangeCredentials}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Username <span className="text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  className="input"
+                  placeholder="Leave empty to keep current username"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password <span className="text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="input"
+                  placeholder="Leave empty to keep current password"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  className="input"
+                  placeholder="Confirm your new password"
+                  disabled={!newPassword}
+                />
+              </div>
+
+              <div className="flex space-x-2">
+                <button
+                  type="submit"
+                  disabled={credentialsLoading}
+                  className="btn-primary flex-1"
+                >
+                  {credentialsLoading ? 'Updating...' : 'Update Credentials'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCredentialsModal(false)}
                   className="btn-secondary"
                 >
                   Cancel

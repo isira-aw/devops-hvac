@@ -6,6 +6,7 @@ import com.hvac.entity.Schedule;
 import com.hvac.repository.FaultLogRepository;
 import com.hvac.security.CustomUserDetails;
 import com.hvac.service.*;
+import com.hvac.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,19 +28,22 @@ public class CustomerController {
     private final PredictionService predictionService;
     private final ScheduleService scheduleService;
     private final FaultLogRepository faultLogRepository;
+    private final AuthService authService;
 
     public CustomerController(
             DeviceService deviceService,
             TelemetryService telemetryService,
             PredictionService predictionService,
             ScheduleService scheduleService,
-            FaultLogRepository faultLogRepository
+            FaultLogRepository faultLogRepository,
+            AuthService authService
     ) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.predictionService = predictionService;
         this.scheduleService = scheduleService;
         this.faultLogRepository = faultLogRepository;
+        this.authService = authService;
     }
 
     // Device Management
@@ -258,5 +262,22 @@ public class CustomerController {
             "email", userDetails.getEmail(),
             "role", userDetails.getRole()
         ));
+    }
+
+    // Change Credentials (for logged-in users)
+    @PostMapping("/change-credentials")
+    public ResponseEntity<?> changeCredentials(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody Map<String, String> payload
+    ) {
+        try {
+            String newUsername = payload.get("username");
+            String newPassword = payload.get("password");
+
+            authService.changeCredentials(userDetails.getUserId(), newUsername, newPassword);
+            return ResponseEntity.ok(Map.of("message", "Credentials updated successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

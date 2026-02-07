@@ -48,6 +48,12 @@ export const authApi = {
 
   googleLogin: (data: { googleId: string; email: string; name: string }) =>
     api.post('/api/auth/google', data),
+
+  forgotPassword: (data: { email: string }) =>
+    api.post('/api/auth/forgot-password', data),
+
+  resetPassword: (data: { token: string; username?: string; password?: string }) =>
+    api.post('/api/auth/reset-password', data),
 };
 
 // Customer APIs
@@ -103,6 +109,9 @@ export const customerApi = {
 
   deleteSchedule: (scheduleId: number) =>
     api.delete(`/api/customer/schedules/${scheduleId}`),
+
+  changeCredentials: (data: { username?: string; password?: string }) =>
+    api.post('/api/customer/change-credentials', data),
 };
 
 export default api;
