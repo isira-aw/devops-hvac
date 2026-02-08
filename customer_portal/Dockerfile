@@ -1,10 +1,12 @@
+# syntax=docker/dockerfile:1
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (BuildKit cache mount keeps npm cache across builds)
 COPY package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # Copy source files
 COPY . .
@@ -17,8 +19,9 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build the application
-RUN npm run build
+# Build the application (cache .next/cache across builds for faster rebuilds)
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -45,7 +48,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=10 \
     CMD node -e "const http = require('http'); const req = http.request({hostname:'localhost',port:3000,path:'/',method:'GET',timeout:5000}, res => { process.exit(res.statusCode === 200 ? 0 : 1) }); req.on('error', () => process.exit(1)); req.end();"
 
 CMD ["node", "server.js"]
