@@ -9,6 +9,10 @@ set -euo pipefail
 COMPOSE_FILE="docker-compose.yml"
 ENV_FILE=".env"
 
+# Enable BuildKit for faster, parallel layer builds and better caching
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
 # ---------- Colors ----------
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -75,31 +79,48 @@ setup_ssl() {
 
 # ---------- Deploy ----------
 deploy() {
-    log "Pulling latest base images..."
-    docker compose pull postgres nginx certbot 2>/dev/null || true
+    # Only pull base images if they're older than 7 days (avoids ~30s per deploy)
+    local pull_needed=false
+    for img in postgres:16-alpine nginx:alpine certbot/certbot; do
+        local created
+        created=$(docker inspect --format '{{.Created}}' "$img" 2>/dev/null || echo "")
+        if [ -z "$created" ]; then
+            pull_needed=true
+            break
+        fi
+        local img_age
+        img_age=$(( $(date +%s) - $(date -d "$created" +%s 2>/dev/null || echo 0) ))
+        if [ "$img_age" -gt 604800 ]; then
+            pull_needed=true
+            break
+        fi
+    done
 
-    log "Building backend container..."
-    docker compose build --no-cache backend
+    if [ "$pull_needed" = true ]; then
+        log "Pulling latest base images (weekly refresh)..."
+        docker compose pull postgres nginx certbot 2>/dev/null || true
+    else
+        log "Base images are up-to-date, skipping pull."
+    fi
 
-    log "Building customer-portal container..."
-    docker compose build --no-cache customer-portal
+    # Build with layer caching (removed --no-cache for much faster builds)
+    log "Building application containers (with layer caching)..."
+    docker compose build backend
+    docker compose build customer-portal
 
-    log "Stopping existing containers..."
-    docker compose down --remove-orphans
-
-    log "Starting all services..."
-    docker compose up -d
+    log "Restarting services with zero-downtime rolling update..."
+    docker compose up -d --remove-orphans
 
     log "Waiting for services to become healthy..."
     local retries=0
-    local max_retries=30
+    local max_retries=20
     while [ $retries -lt $max_retries ]; do
         if docker compose ps | grep -q "(unhealthy)"; then
             retries=$((retries + 1))
-            sleep 10
+            sleep 5
         elif docker compose ps | grep -q "(health: starting)"; then
             retries=$((retries + 1))
-            sleep 10
+            sleep 5
         else
             break
         fi
