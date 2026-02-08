@@ -68,7 +68,7 @@ setup_ssl() {
             -d "${API_DOMAIN:-api.live-ac.tech}" \
             --non-interactive \
             --agree-tos \
-            --email "${MAIL_USERNAME}" \
+            --email "${BREVO_SENDER_EMAIL}" \
             --no-eff-email
 
         log "SSL certificates obtained."
