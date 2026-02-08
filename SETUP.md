@@ -118,21 +118,22 @@ Add each variable below. Mark sensitive ones as **Protected** and **Masked**.
 | `JWT_SECRET`     | *your-jwt-secret-key*     | Yes       | Yes    |
 | `JWT_EXPIRATION` | `21600000`                | Yes       | No     |
 
-### Email (Gmail SMTP)
+### Email (Brevo HTTP API)
 
-| Variable        | Value                  | Protected | Masked |
-|-----------------|------------------------|-----------|--------|
-| `MAIL_HOST`     | `smtp.gmail.com`       | Yes       | No     |
-| `MAIL_PORT`     | `465`                  | Yes       | No     |
-| `MAIL_USERNAME` | *your-email@gmail.com* | Yes       | No     |
-| `MAIL_PASSWORD` | *your-app-password*    | Yes       | Yes    |
+| Variable              | Value                          | Protected | Masked |
+|-----------------------|--------------------------------|-----------|--------|
+| `BREVO_API_KEY`       | *your-brevo-api-key*           | Yes       | Yes    |
+| `BREVO_SENDER_EMAIL`  | *your-verified-sender@domain*  | Yes       | No     |
+| `BREVO_SENDER_NAME`   | `HVAC System`                  | Yes       | No     |
 
-**How to get a Gmail App Password:**
-1. Go to https://myaccount.google.com/security
-2. Enable **2-Step Verification** if not already enabled
-3. Go to https://myaccount.google.com/apppasswords
-4. Select "Mail" and generate a password (16 characters, e.g., `cedm mgtv ykaq bgcz`)
-5. Use that as `MAIL_PASSWORD`
+**How to get Brevo API credentials:**
+1. Sign up at https://www.brevo.com/ (free tier: 300 emails/day)
+2. Go to **SMTP & API > API Keys** (https://app.brevo.com/settings/keys/api)
+3. Create a new API key (starts with `xkeysib-...`)
+4. Use that as `BREVO_API_KEY`
+5. Verify your sender email under **Senders, Domains & Dedicated IPs**
+
+> **Why Brevo HTTP API instead of SMTP?** SMTP ports (25/465/587) are often blocked by cloud providers. The Brevo HTTP API uses HTTPS (port 443) which is always open.
 
 ### Google OAuth2
 
@@ -320,7 +321,7 @@ free -h
 | Backend won't start | Check logs: `docker compose logs backend`. Verify DB_PASSWORD and SPRING_DATASOURCE_URL. |
 | Backend unhealthy (slow start) | On 2GB servers, Spring Boot can take 2+ minutes to start. Check `docker compose logs -f backend` and wait. Java memory is capped at 384MB via `JAVA_OPTS`. |
 | Customer portal unhealthy | Check `docker compose logs customer-portal`. The healthcheck uses Node.js HTTP (not wget). |
-| Email not sending | Verify MAIL_PASSWORD is a Gmail App Password (not your account password). |
+| Email not sending | Verify BREVO_API_KEY is set and sender email is verified in Brevo dashboard. Check backend logs for API errors. |
 | Google OAuth not working | Check GOOGLE_CLIENT_ID, ensure authorized origins include `https://live-ac.tech`. |
 | SSL certificate expired | Run `certbot renew` or check the certbot container: `docker compose logs certbot`. |
 | MQTT not connecting | Verify MOSQUITTO_HOST, PORT, USERNAME, PASSWORD. Test with: `apt install mosquitto-clients && mosquitto_sub -h HOST -p PORT -u USER -P PASS -t '#'` |
