@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { chatbotApi } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -10,7 +9,6 @@ interface Message {
 }
 
 export default function ChatbotWidget() {
-  const { isAuthenticated, isLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -111,11 +109,6 @@ export default function ChatbotWidget() {
       .replace(/`(.*?)`/g, '<code class="bg-gray-200 px-1 rounded text-sm">$1</code>')
       .replace(/\n/g, '<br/>');
   };
-
-  // Only show chatbot for authenticated users
-  if (isLoading || !isAuthenticated) {
-    return null;
-  }
 
   return (
     <>
