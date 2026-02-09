@@ -105,13 +105,28 @@ export const customerApi = {
     api.delete(`/api/customer/schedules/${scheduleId}`),
 };
 
-// Chatbot API
+// Chatbot API - uses a separate axios instance to avoid redirect on 401
+const chatbotAxios = axios.create({
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+chatbotAxios.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
 export const chatbotApi = {
   sendMessage: (data: {
     message: string;
     sessionId?: string;
     history?: Array<{ role: string; content: string }>;
-  }) => api.post('/api/chatbot/chat', data),
+  }) => chatbotAxios.post('/api/chatbot/chat', data),
 };
 
 export default api;
