@@ -103,9 +103,6 @@ export const customerApi = {
 
   deleteSchedule: (scheduleId: number) =>
     api.delete(`/api/customer/schedules/${scheduleId}`),
-
-  chatbot: (data: { message: string; history: { role: string; content: string }[] }) =>
-    api.post('/api/customer/chatbot', data),
 };
 
 export default api;
