@@ -335,7 +335,6 @@ export default function ChatbotWidget() {
                 placeholder="Type your message..."
                 disabled={loading}
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50"
-                style={{ focusRingColor: '#094166' }}
               />
               <button
                 onClick={sendMessage}

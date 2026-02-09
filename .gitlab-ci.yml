@@ -53,6 +53,7 @@ deploy-production:
     - echo "BREVO_API_KEY=\"${BREVO_API_KEY}\"" >> .env
     - echo "BREVO_SENDER_EMAIL=\"${BREVO_SENDER_EMAIL}\"" >> .env
     - echo "BREVO_SENDER_NAME=\"${BREVO_SENDER_NAME}\"" >> .env
+    - echo "GROQ_API_KEY=\"${GROQ_API_KEY}\"" >> .env
     - echo "GOOGLE_CLIENT_ID=\"${GOOGLE_CLIENT_ID}\"" >> .env
     - echo "GOOGLE_CLIENT_SECRET=\"${GOOGLE_CLIENT_SECRET}\"" >> .env
     - echo "CORS_ALLOWED_ORIGINS=\"${CORS_ALLOWED_ORIGINS}\"" >> .env

@@ -27,11 +27,14 @@ public class ChatbotService {
     private final Gson gson = new Gson();
     private final HttpClient httpClient;
 
-    @Value("${gemini.api.key:}")
-    private String geminiApiKey;
+    @Value("${groq.api.key}")
+    private String groqApiKey;
 
-    @Value("${gemini.api.model:gemini-2.0-flash}")
-    private String geminiModel;
+    @Value("${groq.api.model}")
+    private String groqModel;
+
+    @Value("${groq.api.url}")
+    private String groqApiUrl;
 
     public ChatbotService(KnowledgeBaseService knowledgeBaseService) {
         this.knowledgeBaseService = knowledgeBaseService;
@@ -47,136 +50,131 @@ public class ChatbotService {
         }
 
         try {
-            String reply = callGeminiApi(request.getMessage(), request.getHistory());
+            String reply = callGroqApi(request.getMessage(), request.getHistory());
             return new ChatResponse(reply, sessionId);
         } catch (Exception e) {
-            logger.error("Error calling Gemini API: {}", e.getMessage(), e);
+            logger.error("Error calling Groq API", e);
             return new ChatResponse(
-                    "I'm sorry, I'm having trouble processing your request right now. Please try again in a moment.",
+                    "Sorry, I’m having trouble right now. Please try again later.",
                     sessionId
             );
         }
     }
 
-    private String callGeminiApi(String userMessage, List<ChatRequest.ChatMessage> history) throws Exception {
-        String knowledgeContext = knowledgeBaseService.getKnowledgeContext();
+    private String callGroqApi(String userMessage, List<ChatRequest.ChatMessage> history) throws Exception {
 
+        String knowledgeContext = knowledgeBaseService.getKnowledgeContext();
         String systemPrompt = buildSystemPrompt(knowledgeContext);
 
-        String url = String.format(
-                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                geminiModel, geminiApiKey
-        );
+        JsonObject requestBody = buildGroqRequest(systemPrompt, userMessage, history);
 
-        JsonObject requestBody = buildGeminiRequest(systemPrompt, userMessage, history);
-
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(URI.create(url))
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(groqApiUrl))
+                .header("Authorization", "Bearer " + groqApiKey)
                 .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(30))
+                .timeout(Duration.ofSeconds(60))
                 .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(requestBody)))
                 .build();
 
-        HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response =
+                httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            logger.error("Gemini API error: status={}, body={}", response.statusCode(), response.body());
-            throw new RuntimeException("Gemini API returned status " + response.statusCode());
+            logger.error("Groq API error: status={}, body={}",
+                    response.statusCode(), response.body());
+            throw new RuntimeException("Groq API error");
         }
 
-        return extractResponseText(response.body());
+        return extractGroqResponse(response.body());
+    }
+
+    private JsonObject buildGroqRequest(
+            String systemPrompt,
+            String userMessage,
+            List<ChatRequest.ChatMessage> history
+    ) {
+
+        JsonObject body = new JsonObject();
+        body.addProperty("model", groqModel);
+        body.addProperty("temperature", 1);
+        body.addProperty("top_p", 1);
+        body.addProperty("max_completion_tokens", 8192);
+
+        JsonArray messages = new JsonArray();
+
+        // ---- SYSTEM MESSAGE ----
+        JsonObject systemMsg = new JsonObject();
+        systemMsg.addProperty("role", "system");
+        systemMsg.addProperty("content", systemPrompt);
+        messages.add(systemMsg);
+
+        // ---- CHAT HISTORY ----
+        if (history != null && !history.isEmpty()) {
+            for (ChatRequest.ChatMessage msg : history) {
+
+                JsonObject m = new JsonObject();
+
+                String role = msg.getRole();
+                if ("model".equalsIgnoreCase(role)) {
+                    role = "assistant";   // FIX for Groq
+                } else if (!"user".equalsIgnoreCase(role) && !"assistant".equalsIgnoreCase(role)) {
+                    role = "user";        // safety fallback
+                }
+
+                m.addProperty("role", role);
+                m.addProperty("content", msg.getContent());
+                messages.add(m);
+            }
+        }
+
+        // ---- CURRENT USER MESSAGE ----
+        JsonObject userMsg = new JsonObject();
+        userMsg.addProperty("role", "user");
+        userMsg.addProperty("content", userMessage);
+        messages.add(userMsg);
+
+        body.add("messages", messages);
+        return body;
+    }
+
+    private String extractGroqResponse(String responseBody) {
+        JsonObject json = gson.fromJson(responseBody, JsonObject.class);
+        return json
+                .getAsJsonArray("choices")
+                .get(0).getAsJsonObject()
+                .getAsJsonObject("message")
+                .get("content").getAsString();
     }
 
     private String buildSystemPrompt(String knowledgeContext) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("You are an expert HVAC (Heating, Ventilation, and Air Conditioning) support assistant ");
-        sb.append("for the Smart HVAC IoT Control System. Your role is to provide helpful, accurate, and ");
-        sb.append("professional support for:\n\n");
-        sb.append("- AC control and operations\n");
-        sb.append("- HVAC system management and troubleshooting\n");
-        sb.append("- Technical support for HVAC equipment\n");
-        sb.append("- Customer support related to HVAC operations\n");
-        sb.append("- Energy efficiency and optimization advice\n");
-        sb.append("- System maintenance and scheduling\n\n");
-        sb.append("Guidelines:\n");
-        sb.append("- Be concise but thorough in your responses\n");
-        sb.append("- Provide actionable advice when possible\n");
-        sb.append("- If you're unsure, recommend contacting a professional HVAC technician\n");
-        sb.append("- Always prioritize safety in your recommendations\n");
-        sb.append("- Use the knowledge base information provided below when relevant\n\n");
 
-        if (!knowledgeContext.isEmpty()) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("You are an expert HVAC support assistant for the Smart HVAC IoT Control System.\n\n");
+
+        sb.append("IMPORTANT RESPONSE RULES:\n");
+        sb.append("- Always give SHORT and DIRECT answers\n");
+        sb.append("- Explanation must be VERY SHORT (1–2 lines only)\n");
+        sb.append("- Use simple, clear language\n");
+        sb.append("- Avoid long paragraphs\n");
+        sb.append("- Prefer bullet points when possible\n");
+        sb.append("- Do NOT give unnecessary technical depth\n");
+        sb.append("- Focus on practical advice\n\n");
+
+        sb.append("Response format:\n");
+        sb.append("1. Short Answer (1 sentence)\n");
+        sb.append("2. Short Explanation (1–2 short lines)\n\n");
+
+        if (knowledgeContext != null && !knowledgeContext.isEmpty()) {
             sb.append("=== KNOWLEDGE BASE ===\n");
             sb.append(knowledgeContext);
             sb.append("\n=== END KNOWLEDGE BASE ===\n\n");
         }
 
-        sb.append("Answer questions based on the knowledge base when available. ");
-        sb.append("For general HVAC questions, use your expertise to help the customer.");
+        sb.append("If safety is involved, mention it briefly.\n");
+        sb.append("If unsure, suggest contacting an HVAC technician.\n");
 
         return sb.toString();
     }
 
-    private JsonObject buildGeminiRequest(String systemPrompt, String userMessage, List<ChatRequest.ChatMessage> history) {
-        JsonObject requestBody = new JsonObject();
-
-        // System instruction
-        JsonObject systemInstruction = new JsonObject();
-        JsonArray systemParts = new JsonArray();
-        JsonObject systemTextPart = new JsonObject();
-        systemTextPart.addProperty("text", systemPrompt);
-        systemParts.add(systemTextPart);
-        systemInstruction.add("parts", systemParts);
-        requestBody.add("systemInstruction", systemInstruction);
-
-        // Contents (conversation history + current message)
-        JsonArray contents = new JsonArray();
-
-        // Add conversation history
-        if (history != null && !history.isEmpty()) {
-            for (ChatRequest.ChatMessage msg : history) {
-                JsonObject content = new JsonObject();
-                content.addProperty("role", "user".equals(msg.getRole()) ? "user" : "model");
-                JsonArray parts = new JsonArray();
-                JsonObject textPart = new JsonObject();
-                textPart.addProperty("text", msg.getContent());
-                parts.add(textPart);
-                content.add("parts", parts);
-                contents.add(content);
-            }
-        }
-
-        // Add current user message
-        JsonObject userContent = new JsonObject();
-        userContent.addProperty("role", "user");
-        JsonArray userParts = new JsonArray();
-        JsonObject userTextPart = new JsonObject();
-        userTextPart.addProperty("text", userMessage);
-        userParts.add(userTextPart);
-        userContent.add("parts", userParts);
-        contents.add(userContent);
-
-        requestBody.add("contents", contents);
-
-        // Generation config
-        JsonObject generationConfig = new JsonObject();
-        generationConfig.addProperty("temperature", 0.7);
-        generationConfig.addProperty("topP", 0.95);
-        generationConfig.addProperty("topK", 40);
-        generationConfig.addProperty("maxOutputTokens", 1024);
-        requestBody.add("generationConfig", generationConfig);
-
-        return requestBody;
-    }
-
-    private String extractResponseText(String responseBody) {
-        JsonObject response = gson.fromJson(responseBody, JsonObject.class);
-        return response
-                .getAsJsonArray("candidates")
-                .get(0).getAsJsonObject()
-                .getAsJsonObject("content")
-                .getAsJsonArray("parts")
-                .get(0).getAsJsonObject()
-                .get("text").getAsString();
-    }
 }
