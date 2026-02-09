@@ -147,6 +147,13 @@ export default function AdminsPage() {
             <i className="lni lni-users"></i>
             <span>Admins</span>
           </Link>
+          <Link
+            href="/knowledge-base"
+            className="flex items-center space-x-2 px-4 py-3 hover:bg-white hover:bg-opacity-10 rounded-lg"
+          >
+            <i className="lni lni-book"></i>
+            <span>Knowledge Base</span>
+          </Link>
         </nav>
 
         <div className="absolute bottom-6 left-6 right-6">

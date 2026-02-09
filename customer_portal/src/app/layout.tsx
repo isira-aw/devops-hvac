@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth';
 import { GoogleAuthProviderWrapper } from '@/lib/google-oauth';
+import ChatbotWidget from '@/components/ChatbotWidget';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,7 +24,10 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <GoogleAuthProviderWrapper>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            {children}
+            <ChatbotWidget />
+          </AuthProvider>
         </GoogleAuthProviderWrapper>
       </body>
     </html>

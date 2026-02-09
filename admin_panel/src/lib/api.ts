@@ -95,6 +95,22 @@ export const adminApi = {
 
   getUnresolvedFaults: (page = 0, size = 10) =>
     api.get(`/api/admin/faults/unresolved?page=${page}&size=${size}`),
+
+  // Knowledge Base
+  getKnowledgeBase: (page = 0, size = 10) =>
+    api.get(`/api/admin/knowledge-base?page=${page}&size=${size}`),
+
+  getKnowledgeBaseEntry: (id: number) =>
+    api.get(`/api/admin/knowledge-base/${id}`),
+
+  createKnowledgeBase: (data: { title: string; content: string; category: string; isActive: boolean }) =>
+    api.post('/api/admin/knowledge-base', data),
+
+  updateKnowledgeBase: (id: number, data: { title: string; content: string; category: string; isActive: boolean }) =>
+    api.put(`/api/admin/knowledge-base/${id}`, data),
+
+  deleteKnowledgeBase: (id: number) =>
+    api.delete(`/api/admin/knowledge-base/${id}`),
 };
 
 export default api;

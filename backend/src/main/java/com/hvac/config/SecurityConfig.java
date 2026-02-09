@@ -55,6 +55,7 @@ public class SecurityConfig {
                                 "/login/oauth2/**")
                         .permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/chatbot/**").authenticated()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

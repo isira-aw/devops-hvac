@@ -8,6 +8,7 @@ import com.hvac.repository.UserRepository;
 import com.hvac.service.AuthService;
 import com.hvac.service.DashboardService;
 import com.hvac.service.DeviceService;
+import com.hvac.service.KnowledgeBaseService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,19 +30,22 @@ public class AdminController {
     private final AuthService authService;
     private final FaultLogRepository faultLogRepository;
     private final UserRepository userRepository;
+    private final KnowledgeBaseService knowledgeBaseService;
 
     public AdminController(
             DeviceService deviceService,
             DashboardService dashboardService,
             AuthService authService,
             FaultLogRepository faultLogRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            KnowledgeBaseService knowledgeBaseService
     ) {
         this.deviceService = deviceService;
         this.dashboardService = dashboardService;
         this.authService = authService;
         this.faultLogRepository = faultLogRepository;
         this.userRepository = userRepository;
+        this.knowledgeBaseService = knowledgeBaseService;
     }
 
     // Dashboard
@@ -176,5 +180,55 @@ public class AdminController {
     ) {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(faultLogRepository.findByIsResolvedFalseOrderByCreatedAtDesc(pageable));
+    }
+
+    // Knowledge Base Management
+    @GetMapping("/knowledge-base")
+    public ResponseEntity<Page<KnowledgeBaseResponse>> getKnowledgeBase(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(knowledgeBaseService.getAll(pageable));
+    }
+
+    @GetMapping("/knowledge-base/{id}")
+    public ResponseEntity<?> getKnowledgeBaseEntry(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(knowledgeBaseService.getById(id));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/knowledge-base")
+    public ResponseEntity<?> createKnowledgeBase(@Valid @RequestBody KnowledgeBaseRequest request) {
+        try {
+            return ResponseEntity.ok(knowledgeBaseService.create(request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/knowledge-base/{id}")
+    public ResponseEntity<?> updateKnowledgeBase(
+            @PathVariable Long id,
+            @Valid @RequestBody KnowledgeBaseRequest request
+    ) {
+        try {
+            return ResponseEntity.ok(knowledgeBaseService.update(id, request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/knowledge-base/{id}")
+    public ResponseEntity<?> deleteKnowledgeBase(@PathVariable Long id) {
+        try {
+            knowledgeBaseService.delete(id);
+            return ResponseEntity.ok(Map.of("message", "Knowledge base entry deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }
