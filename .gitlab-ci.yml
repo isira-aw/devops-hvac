@@ -56,6 +56,7 @@ deploy-production:
     - echo "GOOGLE_CLIENT_ID=\"${GOOGLE_CLIENT_ID}\"" >> .env
     - echo "GOOGLE_CLIENT_SECRET=\"${GOOGLE_CLIENT_SECRET}\"" >> .env
     - echo "CORS_ALLOWED_ORIGINS=\"${CORS_ALLOWED_ORIGINS}\"" >> .env
+    - echo "GEMINI_API_KEY=\"${GEMINI_API_KEY}\"" >> .env
     - echo "NEXT_PUBLIC_API_URL=\"${NEXT_PUBLIC_API_URL}\"" >> .env
     - echo "NEXT_PUBLIC_GOOGLE_CLIENT_ID=\"${GOOGLE_CLIENT_ID}\"" >> .env
     - echo "DOMAIN=\"${DOMAIN}\"" >> .env

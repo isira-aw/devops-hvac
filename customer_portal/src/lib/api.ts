@@ -105,4 +105,13 @@ export const customerApi = {
     api.delete(`/api/customer/schedules/${scheduleId}`),
 };
 
+// Chatbot API
+export const chatbotApi = {
+  sendMessage: (data: {
+    message: string;
+    sessionId?: string;
+    history?: Array<{ role: string; content: string }>;
+  }) => api.post('/api/chatbot/chat', data),
+};
+
 export default api;
