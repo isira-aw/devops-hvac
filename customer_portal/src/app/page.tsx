@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { Bot } from 'lucide-react';
+import LiveDashboardTemplate from '@/components/LiveDashboardTemplate';
 
 const steps = [
   {
@@ -683,49 +684,7 @@ export default function HomePage() {
                 <span className="text-white text-xs md:text-sm ml-2 md:ml-4 truncate">Smart HVAC Dashboard - Building A</span>
               </div>
 
-              <div className="p-4 md:p-6 lg:p-8">
-                <div className="flex gap-2 md:gap-4 mb-6 md:mb-8 overflow-x-auto pb-2">
-                  {['Overview', 'Devices', 'Analytics', 'Alerts'].map((tab, i) => (
-                    <span
-                      key={tab}
-                      className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium whitespace-nowrap ${
-                        i === 0 ? 'text-white' : 'bg-gray-100 text-gray-600'
-                      }`}
-                      style={i === 0 ? { backgroundColor: 'var(--primary)' } : {}}
-                    >
-                      {tab}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-6 md:mb-8">
-                  {[
-                    { value: '23°C', label: 'Avg Temperature', color: '#ef4444' },
-                    { value: '45%', label: 'Humidity Level', color: '#3b82f6' },
-                    { value: '2.4kW', label: 'Energy Usage', color: '#10b981' },
-                    { value: '12/12', label: 'Units Online', color: '#8b5cf6' },
-                  ].map((metric) => (
-                    <div key={metric.label} className="bg-gradient-to-br from-gray-50 to-white border border-gray-100 rounded-xl md:rounded-2xl p-3 md:p-4 lg:p-6 text-center transition-all hover:-translate-y-1 hover:shadow-lg">
-                      <div className="text-xl md:text-2xl lg:text-3xl font-extrabold mb-0.5 md:mb-1" style={{ color: metric.color }}>{metric.value}</div>
-                      <div className="text-gray-500 text-[10px] md:text-xs lg:text-sm">{metric.label}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-gray-50 rounded-xl md:rounded-2xl p-4 md:p-6 h-[150px] md:h-[200px] flex items-end gap-1 md:gap-2">
-                  {[60, 80, 45, 90, 70, 55, 85, 65, 75, 50, 95, 72].map((height, i) => (
-                    <div
-                      key={i}
-                      className="chart-bar flex-1 rounded-t-lg"
-                      style={{
-                        height: `${height}%`,
-                        background: 'linear-gradient(to top, var(--primary), var(--primary-light))',
-                        animationDelay: `${i * 0.1}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
+                <LiveDashboardTemplate />
             </div>
           </div>
         </section>

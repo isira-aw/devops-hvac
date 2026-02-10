@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { customerApi } from '@/lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import Link from 'next/link';
+import { Thermometer } from 'lucide-react';
 
 interface DeviceStatus {
   device: {
@@ -355,7 +356,7 @@ export default function DeviceDashboard() {
           <div className="card">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <i className="lni lni-thermometer text-xl text-blue-600"></i>
+                <Thermometer className="w-6 h-6 text-blue-500" />
               </div>
               <div>
                 <p className="text-sm text-gray-500">Room Temp</p>
