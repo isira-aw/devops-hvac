@@ -321,7 +321,7 @@ export default function HistoryPage() {
       const headers = ['Timestamp', ...selectedColDefs.map(col => `${col.label}${col.unit ? ` (${col.unit})` : ''}`)];
 
       const tableData = dataToExport.map(item => [
-        new Date(item.timestamp + 'Z').toLocaleString(),
+        new Date(item.timestamp).toLocaleString(),
         ...selectedColDefs.map(col => col.format(item[col.key]))
       ]);
 
@@ -930,7 +930,7 @@ export default function HistoryPage() {
                             />
                           </td>
                           <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                            {new Date(item.timestamp + 'Z').toLocaleString()}
+                            {new Date(item.timestamp).toLocaleString()}
                           </td>
                           {selectedColDefs.map(col => (
                             <td key={col.key} className="px-3 py-2 text-right font-medium whitespace-nowrap">

@@ -585,7 +585,7 @@ export default function DeviceDashboard() {
             <div className="flex justify-end gap-2">
               <div className="flex items-center space-x-2 px-4 py-2 border-2 border-primary text-primary rounded-md hover:bg-blue-50 cursor-pointer transition">
                 <i className="lni lni-alarm"></i>
-                <span>Last Update Time : {telemetry.timestamp ? new Date(telemetry.timestamp + 'Z').toLocaleString() : 'N/A'}</span>
+                <span>Last Update Time : {telemetry.timestamp ? new Date(telemetry.timestamp).toLocaleString() : 'N/A'}</span>
               </div>
               <button
                 onClick={() => router.push(`/${deviceId}/history`)}
@@ -605,12 +605,12 @@ export default function DeviceDashboard() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="timestamp"
-                      tickFormatter={(val) => new Date(val + 'Z').toLocaleTimeString()}
+                      tickFormatter={(val) => new Date(val).toLocaleTimeString()}
                       fontSize={12}
                     />
                     <YAxis domain={['auto', 'auto']} fontSize={12} />
                     <Tooltip
-                      labelFormatter={(val) => new Date(val + 'Z').toLocaleString()}
+                      labelFormatter={(val) => new Date(val).toLocaleString()}
                     />
                     <Line
                       type="monotone"
@@ -640,12 +640,12 @@ export default function DeviceDashboard() {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="timestamp"
-                      tickFormatter={(val) => new Date(val + 'Z').toLocaleTimeString()}
+                      tickFormatter={(val) => new Date(val).toLocaleTimeString()}
                       fontSize={12}
                     />
                     <YAxis fontSize={12} />
                     <Tooltip
-                      labelFormatter={(val) => new Date(val + 'Z').toLocaleString()}
+                      labelFormatter={(val) => new Date(val).toLocaleString()}
                     />
                     <Area
                       type="monotone"
@@ -717,7 +717,7 @@ export default function DeviceDashboard() {
                         <div className="font-medium">{fault.faultType}</div>
                         <div className="text-xs opacity-75">{fault.description}</div>
                         <div className="text-xs opacity-50">
-                          {new Date(fault.createdAt + 'Z').toLocaleString()}
+                          {new Date(fault.createdAt).toLocaleString()}
                         </div>
                       </div>
                     ))}
