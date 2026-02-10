@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { Bot } from 'lucide-react';
 
 const steps = [
   {
@@ -507,7 +508,7 @@ export default function HomePage() {
                 { icon: <CogIcon />, color: "text-purple-600", title: 'Remote Control', desc: 'Adjust fan speed and modes from anywhere via smartphone.', tag: 'Remote' },
                 { icon: <BellIcon />, color: "text-cyan-600", title: 'Smart Alerts', desc: 'Instant notifications for faults and maintenance needs.', tag: 'Alerts' },
                 { icon: <ChartIcon />, color: "text-emerald-600", title: 'Energy Analytics', desc: 'Analyze consumption patterns and identify waste easily.', tag: 'Data' },
-                { icon: <CalendarIcon />, color: "text-orange-600", title: 'Smart Scheduling', desc: 'Automated schedules based on occupancy and custom rules.', tag: 'Auto' },
+                { icon: <Bot />, color: "text-orange-600", title: ' AI Powered Assistant', desc: 'AI-driven insights and recommendations for optimal HVAC performance.', tag: 'Chatbot' },
                 { icon: <ShieldIcon />, color: "text-red-600", title: 'Enterprise Security', desc: 'Bank-level encryption and two-factor authentication.', tag: 'Security' },
               ].map((feature, i) => (
                 <div

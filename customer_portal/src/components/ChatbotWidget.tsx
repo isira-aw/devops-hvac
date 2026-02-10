@@ -3,11 +3,29 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { chatbotApi } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import {
+  Bot,
+  X,
+  Send,
+  MessageSquare,
+  Sparkles,
+  ThermometerSun,
+  Wrench,
+  Zap,
+  Loader2,
+  ChevronDown,
+} from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+
+const suggestions = [
+  { icon: Wrench, text: 'How do I reset my AC unit?' },
+  { icon: ThermometerSun, text: 'My AC is not cooling properly' },
+  { icon: Zap, text: 'Energy saving tips' },
+];
 
 export default function ChatbotWidget() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -15,9 +33,9 @@ export default function ChatbotWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sessionId, setSessionId] = useState<string>('');
+  const [sessionId, setSessionId] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,6 +49,29 @@ export default function ChatbotWidget() {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
     }
+  }, [isOpen]);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`;
+    }
+  }, [input]);
+
+  // Lock body scroll on mobile when chat is open
+  useEffect(() => {
+    if (isOpen) {
+      const isMobile = window.innerWidth < 640;
+      if (isMobile) {
+        document.body.style.overflow = 'hidden';
+      }
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   const sendMessage = async () => {
@@ -56,9 +97,8 @@ export default function ChatbotWidget() {
 
       const { reply, sessionId: newSessionId } = response.data;
       if (newSessionId) setSessionId(newSessionId);
-
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
@@ -84,13 +124,17 @@ export default function ChatbotWidget() {
         sessionId: sessionId || undefined,
         history: [],
       });
+
       const { reply, sessionId: newSessionId } = response.data;
       if (newSessionId) setSessionId(newSessionId);
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Sorry, I encountered an error. Please try again.' },
+        {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error. Please try again.',
+        },
       ]);
     } finally {
       setLoading(false);
@@ -104,217 +148,222 @@ export default function ChatbotWidget() {
     }
   };
 
-  const formatMessage = (text: string) => {
+  const formatMessage = (text: string): string => {
     return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-gray-200 px-1 rounded text-sm">$1</code>')
+      .replace(
+        /`(.*?)`/g,
+        '<code class="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-xs font-mono">$1</code>'
+      )
+      .replace(
+        /^### (.+)$/gm,
+        '<h3 class="text-sm font-bold text-slate-800 mt-3 mb-1">$1</h3>'
+      )
+      .replace(
+        /^## (.+)$/gm,
+        '<h2 class="text-sm font-bold text-slate-800 mt-3 mb-1">$1</h2>'
+      )
+      .replace(
+        /^[-•] (.+)$/gm,
+        '<div class="flex gap-2 items-start ml-1 my-0.5"><span class="text-sky-500 mt-1 text-[8px]">●</span><span>$1</span></div>'
+      )
+      .replace(
+        /^\d+\.\s(.+)$/gm,
+        '<div class="flex gap-2 items-start ml-1 my-0.5"><span class="text-sky-500 font-medium text-xs min-w-[16px]">$&</span></div>'
+      )
+      .replace(/\n{2,}/g, '<div class="h-2"></div>')
       .replace(/\n/g, '<br/>');
   };
 
-  // Only show chatbot for authenticated users
   if (isLoading || !isAuthenticated) {
     return null;
   }
 
   return (
     <>
-      {/* Floating Robot Icon */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
-        style={{ backgroundColor: '#094166' }}
-        title="HVAC Support Chat"
-      >
-        {isOpen ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      {/* ── Floating Action Button ── */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-5 right-5 z-50 group"
+          title="HVAC Support Chat"
+        >
+          <div
+            className="relative w-14 h-14 rounded-2xl shadow-lg shadow-sky-900/20 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-sky-900/30"
+            style={{
+              background: 'linear-gradient(135deg, #0c5a8a 0%, #063c5c 100%)',
+            }}
           >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {/* Robot head */}
-            <rect x="5" y="8" width="14" height="10" rx="2" />
-            {/* Antenna */}
-            <line x1="12" y1="8" x2="12" y2="4" />
-            <circle cx="12" cy="3" r="1" />
-            {/* Eyes */}
-            <circle cx="9" cy="13" r="1" fill="white" />
-            <circle cx="15" cy="13" r="1" fill="white" />
-            {/* Ears */}
-            <line x1="5" y1="11" x2="3" y2="11" />
-            <line x1="5" y1="15" x2="3" y2="15" />
-            <line x1="19" y1="11" x2="21" y2="11" />
-            <line x1="19" y1="15" x2="21" y2="15" />
-            {/* Mouth */}
-            <path d="M9 16h6" />
-          </svg>
-        )}
-      </button>
+            <MessageSquare className="w-6 h-6 text-white" strokeWidth={2} />
+            {/* Pulse indicator */}
+            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-400 border-2 border-white" />
+            </span>
+          </div>
+        </button>
+      )}
 
-      {/* Chat Popup Window */}
+      {/* ── Chat Window ── */}
       {isOpen && (
         <div
-          className="fixed bottom-24 right-6 z-50 w-96 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          className={`
+            fixed z-50 flex flex-col bg-white
+            /* Mobile: full screen */
+            inset-0
+            /* Desktop: floating popup */
+            sm:inset-auto sm:bottom-5 sm:right-5
+            sm:w-[400px] sm:h-[600px] sm:max-h-[80vh]
+            sm:rounded-2xl sm:shadow-2xl sm:shadow-slate-900/15
+            sm:border sm:border-slate-200/80
+            transition-all duration-300 animate-in
+          `}
           style={{
-            height: '520px',
-            maxHeight: 'calc(100vh - 140px)',
-            border: '1px solid #e5e7eb',
+            animationName: 'slideUp',
+            animationDuration: '0.3s',
+            animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          {/* Header */}
+          {/* ── Header ── */}
           <div
-            className="px-5 py-4 flex items-center space-x-3"
-            style={{ backgroundColor: '#094166' }}
+            className="relative flex items-center gap-3 px-4 py-3.5 sm:rounded-t-2xl shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, #0c5a8a 0%, #063c5c 100%)',
+            }}
           >
-            <div className="w-9 h-9 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="5" y="8" width="14" height="10" rx="2" />
-                <line x1="12" y1="8" x2="12" y2="4" />
-                <circle cx="12" cy="3" r="1" />
-                <circle cx="9" cy="13" r="1" fill="white" />
-                <circle cx="15" cy="13" r="1" fill="white" />
-                <path d="M9 16h6" />
-              </svg>
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm">
+              <Bot className="w-5 h-5 text-white" strokeWidth={2} />
             </div>
-            <div className="flex-1">
-              <h3 className="text-white font-semibold text-sm">HVAC Support</h3>
-              <p className="text-white text-xs opacity-75">Online - Ready to help</p>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-white font-semibold text-[15px] leading-tight">
+                HVAC Support
+              </h2>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-white opacity-75 hover:opacity-100 transition-opacity"
+              className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              aria-label="Close chat"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+              {/* Show down-chevron on desktop (minimize), X on mobile (close full-screen) */}
+              <ChevronDown className="w-5 h-5 text-white hidden sm:block" />
+              <X className="w-5 h-5 text-white sm:hidden" />
             </button>
           </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+          {/* ── Messages Area ── */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gradient-to-b from-slate-50/80 to-white overscroll-contain">
+            {/* Welcome State */}
             {messages.length === 0 && (
-              <div className="text-center py-8">
+              <div className="flex flex-col items-center text-center pt-6 pb-2">
                 <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3"
-                  style={{ backgroundColor: '#094166' }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+                  style={{
+                    background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+                  }}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="5" y="8" width="14" height="10" rx="2" />
-                    <line x1="12" y1="8" x2="12" y2="4" />
-                    <circle cx="12" cy="3" r="1" />
-                    <circle cx="9" cy="13" r="1" fill="white" />
-                    <circle cx="15" cy="13" r="1" fill="white" />
-                    <path d="M9 16h6" />
-                  </svg>
+                  <Bot className="w-7 h-7 text-sky-600" />
                 </div>
-                <h4 className="font-semibold text-gray-700 mb-1">HVAC Support Assistant</h4>
-                <p className="text-sm text-gray-500 px-4">
-                  Hi! I can help you with AC control, HVAC troubleshooting, maintenance advice, and
-                  more. How can I assist you?
+                <h3 className="text-slate-800 font-semibold text-base">
+                  HVAC AI Support Assistant
+                </h3>
+                <p className="text-slate-500 text-sm mt-1.5 max-w-[280px] leading-relaxed">
+                  Hi! I can help with AC control, troubleshooting, maintenance, and
+                  more.
                 </p>
-                <div className="mt-4 space-y-2">
-                  {[
-                    'How do I reset my AC unit?',
-                    'My AC is not cooling properly',
-                    'Energy saving tips',
-                  ].map((suggestion) => (
+
+                {/* Suggestion Chips */}
+                <div className="w-full mt-6 space-y-2">
+                  {suggestions.map(({ icon: Icon, text }) => (
                     <button
-                      key={suggestion}
-                      onClick={() => handleSuggestion(suggestion)}
-                      className="block w-full text-left px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+                      key={text}
+                      onClick={() => handleSuggestion(text)}
+                      className="flex items-center gap-3 w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-left text-sm text-slate-700 hover:border-sky-300 hover:bg-sky-50/50 transition-all duration-200 group"
                     >
-                      {suggestion}
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-sky-100 transition-colors shrink-0">
+                        <Icon className="w-4 h-4 text-slate-500 group-hover:text-sky-600 transition-colors" />
+                      </span>
+                      <span className="leading-snug">{text}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+            {/* Message Bubbles */}
+            {messages.map((msg, index) => {
+              const isUser = msg.role === 'user';
+              return (
                 <div
-                  className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'text-white rounded-br-md'
-                      : 'bg-white text-gray-800 rounded-bl-md shadow-sm border border-gray-100'
-                  }`}
-                  style={msg.role === 'user' ? { backgroundColor: '#094166' } : undefined}
-                  dangerouslySetInnerHTML={{ __html: formatMessage(msg.content) }}
-                />
-              </div>
-            ))}
+                  key={index}
+                  className={`flex ${isUser ? 'justify-end' : 'justify-start'} gap-2`}
+                >
+                  {/* Assistant avatar */}
+                  {!isUser && (
+                    <div className="flex items-end shrink-0">
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, #0c5a8a 0%, #063c5c 100%)',
+                        }}
+                      >
+                        <Bot className="w-3.5 h-3.5 text-white" />
+                      </div>
+                    </div>
+                  )}
 
+                  <div
+                    className={`
+                      max-w-[78%] px-3.5 py-2.5 text-[14px] leading-relaxed
+                      ${
+                        isUser
+                          ? 'bg-gradient-to-br from-sky-600 to-sky-700 text-white rounded-2xl rounded-br-md'
+                          : 'bg-white border border-slate-200/80 text-slate-700 rounded-2xl rounded-bl-md shadow-sm'
+                      }
+                    `}
+                  >
+                    {isUser ? (
+                      <span>{msg.content}</span>
+                    ) : (
+                      <div
+                        className="assistant-msg prose-sm [&_strong]:text-slate-900 [&_code]:break-all"
+                        dangerouslySetInnerHTML={{
+                          __html: formatMessage(msg.content),
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Typing Indicator */}
             {loading && (
-              <div className="flex justify-start">
-                <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-md shadow-sm border border-gray-100">
-                  <div className="flex space-x-1.5">
-                    <div
-                      className="w-2 h-2 rounded-full animate-bounce"
-                      style={{ backgroundColor: '#094166', animationDelay: '0ms' }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 rounded-full animate-bounce"
-                      style={{ backgroundColor: '#094166', animationDelay: '150ms' }}
-                    ></div>
-                    <div
-                      className="w-2 h-2 rounded-full animate-bounce"
-                      style={{ backgroundColor: '#094166', animationDelay: '300ms' }}
-                    ></div>
+              <div className="flex items-end gap-2">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                  style={{
+                    background:
+                      'linear-gradient(135deg, #0c5a8a 0%, #063c5c 100%)',
+                  }}
+                >
+                  <Bot className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="bg-white border border-slate-200/80 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-full bg-slate-400 animate-bounce"
+                      style={{ animationDelay: '0ms' }}
+                    />
+                    <span
+                      className="w-2 h-2 rounded-full bg-slate-400 animate-bounce"
+                      style={{ animationDelay: '150ms' }}
+                    />
+                    <span
+                      className="w-2 h-2 rounded-full bg-slate-400 animate-bounce"
+                      style={{ animationDelay: '300ms' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -323,44 +372,87 @@ export default function ChatbotWidget() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
-          <div className="p-3 border-t bg-white">
-            <div className="flex items-center space-x-2">
-              <input
+          {/* ── Input Area ── */}
+          <div className="shrink-0 border-t border-slate-100 bg-white px-3 py-3 sm:rounded-b-2xl">
+            <div className="flex items-end gap-2">
+              <textarea
                 ref={inputRef}
-                type="text"
+                rows={1}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type your message..."
                 disabled={loading}
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:border-transparent disabled:opacity-50 disabled:bg-gray-50"
+                className="flex-1 resize-none px-4 py-2.5 m-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400 disabled:opacity-50 disabled:bg-slate-100 transition-all max-h-[120px] leading-relaxed"
               />
               <button
                 onClick={sendMessage}
                 disabled={!input.trim() || loading}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-opacity disabled:opacity-40"
-                style={{ backgroundColor: '#094166' }}
+                className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  background:
+                    input.trim() && !loading
+                      ? 'linear-gradient(135deg, #0c5a8a 0%, #063c5c 100%)'
+                      : '#e2e8f0',
+                }}
+                aria-label="Send message"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="22" y1="2" x2="11" y2="13"></line>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                </svg>
+                {loading ? (
+                  <Loader2 className="w-4.5 h-4.5 text-white animate-spin" />
+                ) : (
+                  <Send
+                    className={`w-4.5 h-4.5 ${
+                      input.trim() ? 'text-white' : 'text-slate-400'
+                    }`}
+                    strokeWidth={2}
+                  />
+                )}
               </button>
             </div>
+            <p className="text-[11px] text-slate-400 text-center mt-2">
+              Powered by HVAC AI &middot; Responses may vary
+            </p>
           </div>
         </div>
       )}
+
+      {/* ── Keyframes ── */}
+      <style jsx global>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        /* Mobile full-screen override */
+        @media (max-width: 639px) {
+          @keyframes slideUp {
+            from {
+              opacity: 0;
+              transform: translateY(100%);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        }
+
+        .assistant-msg a {
+          color: #0284c7;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+
+        .assistant-msg a:hover {
+          color: #0369a1;
+        }
+      `}</style>
     </>
   );
 }
